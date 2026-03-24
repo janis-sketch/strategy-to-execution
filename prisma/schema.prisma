@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  role      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  taskAssignments Task[]
+  assignments     Assignment[]
+}
+
+model FocusArea {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  color       String?
+  sortOrder   Int         @default(0)
+  parentId    String?
+  parent      FocusArea?  @relation("FocusAreaHierarchy", fields: [parentId], references: [id])
+  children    FocusArea[] @relation("FocusAreaHierarchy")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  goals       Goal[]
+  initiatives Initiative[]
+  assignments Assignment[]
+}
+
+model Goal {
+  id           String    @id @default(cuid())
+  title        String
+  description  String?
+  goalType     String
+  metricType   String?
+  currentValue Float     @default(0)
+  targetValue  Float     @default(100)
+  startValue   Float     @default(0)
+  unit         String?
+  status       String    @default("not_started")
+  dueDate      DateTime?
+  focusAreaId  String
+  focusArea    FocusArea @relation(fields: [focusAreaId], references: [id], onDelete: Cascade)
+  parentGoalId String?
+  parentGoal   Goal?     @relation("GoalHierarchy", fields: [parentGoalId], references: [id])
+  keyResults   Goal[]    @relation("GoalHierarchy")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Initiative {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  status      String    @default("planned")
+  priority    String    @default("medium")
+  startDate   DateTime?
+  endDate     DateTime?
+  focusAreaId String
+  focusArea   FocusArea @relation(fields: [focusAreaId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tasks Task[]
+}
+
+model Task {
+  id           String      @id @default(cuid())
+  title        String
+  description  String?
+  status       String      @default("todo")
+  priority     String      @default("medium")
+  dueDate      DateTime?
+  initiativeId String
+  initiative   Initiative  @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  assigneeId   String?
+  assignee     TeamMember? @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Assignment {
+  id           String     @id @default(cuid())
+  teamMemberId String
+  teamMember   TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  focusAreaId  String
+  focusArea    FocusArea  @relation(fields: [focusAreaId], references: [id], onDelete: Cascade)
+  role         String?
+  createdAt    DateTime   @default(now())
+
+  @@unique([teamMemberId, focusAreaId])
+}
